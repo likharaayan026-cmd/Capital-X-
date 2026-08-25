@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Capital X - Trading Risk & PnL Calculator</title>
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --surface: #131927;
+      --surface-card: #1c2436;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+      --danger: #ef4444;
+      --success: #10b981;
+      --radius: 18px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 12px;
+      overflow-x: hidden;
+    }
+
+    /* SPLASH SCREEN STYLES */
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+
+    .splash-logo {
+      width: 80px;
+      height: 80px;
+      background: var(--surface);
+      border: 2px solid var(--primary);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--primary);
+      box-shadow: 0 0 30px var(--primary-glow);
+      animation: pulse 1.5s infinite alternate;
+      margin-bottom: 20px;
+    }
+
+    .splash-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .splash-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 15px var(--primary-glow);
+      }
+      100% {
+        transform: scale(1.05);
+        box-shadow: 0 0 35px rgba(99, 102, 241, 0.5);
+      }
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-bottom: 30px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px 16px;
+      border-radius: var(--radius);
+      text-align: center;
+      position: relative;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #a5b4fc;
+      background: rgba(99, 102, 241, 0.12);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      margin-bottom: 8px;
+    }
+
+    .brand-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* TOP TAB SWITCHER */
+    .tab-container {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px;
+      gap: 6px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px 8px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    /* INPUT CARD */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .input-field {
+      width: 100%;
+      background: var(--surface-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      outline: none;
+      transition: all 0.25s ease;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    /* BUTTONS */
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .btn-primary:not(:disabled):active {
+      transform: scale(0.98);
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:disabled {
+      background: var(--surface-card);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .btn-share {
+      background: var(--surface-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      margin-top: 16px;
+    }
+
+    .btn-share:active {
+      transform: scale(0.98);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* RESULT CARD */
+    .result-wrapper {
+      display: none;
+    }
+
+    .trade-plan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px;
+      color: var(--text-main);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+
+    .trade-plan-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .plan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-box {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .grid-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .grid-value {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .grid-value.danger { color: #ef4444; }
+    .grid-value.success { color: #10b981; }
+
+    .info-banner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .footer-credits {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 12px;
+    }
+
+    /* PREVIEW MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .modal-img {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .modal-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .btn-close {
+      background: var(--surface-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SPLASH SCREEN -->
+  <div id="splash-screen">
+    <div class="splash-logo">X</div>
+    <div class="splash-title">Capital X</div>
+    <div class="splash-subtitle">Aayan Industries</div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="app-container" id="app-content">
+    
+    <!-- HEADER -->
+    <header class="header">
+      <div class="brand-badge">TRADING CALCULATOR</div>
+      <h1 class="brand-title">Capital X</h1>
+      <p class="brand-subtitle">Powered by Aayan Industries</p>
+    </header>
+
+    <!-- TOP TWO OPTIONS (TAB SWITCHER) -->
+    <div class="tab-container">
+      <button class="tab-btn active" onclick="switchTab('risk-tab', this)">Risk Calculator</button>
+      <button class="tab-btn" onclick="switchTab('pnl-tab', this)">Profit Calculator</button>
+    </div>
+
+    <!-- TAB 1: RISK CALCULATOR -->
+    <div id="risk-tab" class="tab-content active">
+      <div class="card">
+        <div class="card-title">ACCOUNT PARAMETERS</div>
+
+        <div class="input-group">
+          <label>Total Capital (₹)</label>
+          <input type="number" id="capital" class="input-field" placeholder="Enter capital e.g. 10000" oninput="validateInputs()">
+        </div>
+
+        <div class="input-group">
+          <label>Leverage (1x - 100x)</label>
+          <input type="number" id="leverage" class="input-field" min="1" max="100" placeholder="Enter leverage e.g. 25" oninput="validateInputs()">
+        </div>
+
+        <button id="calc-btn" class="btn btn-primary" disabled onclick="calculateRiskPlan()">
+          Calculate Risk Plan
+        </button>
+      </div>
+
+      <div id="result-wrapper" class="result-wrapper">
+        <div class="trade-plan-card">
+          <div class="trade-plan-title">Your Risk Management Plan</div>
+          
+          <div class="plan-grid">
+            <div class="grid-box">
+              <span class="grid-label">Total Capital</span>
+              <span class="grid-value" id="res-capital">₹0</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Margin Allocated</span>
+              <span class="grid-value" id="res-margin">₹0 (15%)</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Leverage</span>
+              <span class="grid-value" id="res-leverage">0×</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Position Exposure</span>
+              <span class="grid-value" id="res-exposure">₹0</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Risk Per Trade</span>
+              <span class="grid-value danger" id="res-risk">₹0 (2%)</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Daily Loss Limit</span>
+              <span class="grid-value danger" id="res-daily-loss">₹0</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Daily Target</span>
+              <span class="grid-value success" id="res-daily-target">₹0</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Planned Loss Limit</span>
+              <span class="grid-value" id="res-loss-limit">1 Trade</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-banner">
+          💡 <b>Recommendation:</b> Standard 15% margin allocation applied. Recommended Margin: <span id="rec-margin">₹0</span>. Stop Loss set at 2% capital risk.
+        </div>
+
+        <button class="btn btn-share" onclick="shareAsImage('risk')">
+          Download Trade Plan
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 2: PROFIT CALCULATOR -->
+    <div id="pnl-tab" class="tab-content">
+      <div class="card">
+        <div class="card-title">PROFIT / LOSS PARAMETERS</div>
+
+        <div class="input-group">
+          <label>Capital (₹)</label>
+          <input type="number" id="pnl-capital" class="input-field" placeholder="Enter capital e.g. 50000" oninput="validatePnlInputs()">
+        </div>
+
+        <div class="input-group">
+          <label>Leverage (1x - 200x)</label>
+          <input type="number" id="pnl-leverage" class="input-field" min="1" max="200" placeholder="Enter leverage (1 to 200)" oninput="validatePnlInputs()">
+        </div>
+
+        <div class="input-group">
+          <label>Price Change (%) [Bada / Ghata]</label>
+          <input type="number" id="pnl-percentage" step="0.01" class="input-field" placeholder="e.g. 0.6 or -1.5" oninput="validatePnlInputs()">
+        </div>
+
+        <button id="pnl-calc-btn" class="btn btn-primary" disabled onclick="calculatePnL()">
+          Calculate Profit / Loss
+        </button>
+      </div>
+
+      <div id="pnl-result-wrapper" class="result-wrapper">
+        <div class="trade-plan-card">
+          <div class="trade-plan-title">PnL Calculation Result</div>
+          
+          <div class="plan-grid">
+            <div class="grid-box">
+              <span class="grid-label">Capital</span>
+              <span class="grid-value" id="pnl-res-capital">₹0</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Leverage</span>
+              <span class="grid-value" id="pnl-res-leverage">0×</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Price Change</span>
+              <span class="grid-value" id="pnl-res-percentage">0%</span>
+            </div>
+
+            <div class="grid-box">
+              <span class="grid-label">Total Exposure</span>
+              <span class="grid-value" id="pnl-res-exposure">₹0</span>
+            </div>
+
+            <div class="grid-box" style="grid-column: span 2;">
+              <span class="grid-label">Total Net Profit / Loss</span>
+              <span class="grid-value" id="pnl-res-total">₹0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-banner">
+          📊 Formula Applied: <b>(Capital × Leverage × Price Change %) ÷ 100</b>
+        </div>
+
+        <button class="btn btn-share" onclick="shareAsImage('pnl')">
+          Download PnL Report
+        </button>
+      </div>
+    </div>
+
+    <div class="footer-credits">
+      Capital X • Aayan Industries
+    </div>
+
+  </div>
+
+  <!-- IMAGE PREVIEW MODAL -->
+  <div id="image-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-title" id="modal-card-title">Generated Trade Plan</div>
+      <img id="preview-img" class="modal-img" src="" alt="Trade Plan">
+      <div class="modal-hint">Tap "Download" or Long-press (hold) the image to save.</div>
+      <div class="modal-actions">
+        <a id="download-link" class="btn btn-primary" style="text-decoration:none; text-align:center;" download="CapitalX_Report.png">Download</a>
+        <button class="btn btn-close" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- SPLASH SCREEN TIMING ---
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        const content = document.getElementById('app-content');
+        
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+        content.style.opacity = '1';
+      }, 2000);
+    });
+
+    // --- TAB SWITCHER LOGIC ---
+    function switchTab(tabId, btnElement) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      btnElement.classList.add('active');
+    }
+
+    // --- FIREBASE INITIALIZATION ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBt3iYcR4SijEJqtrBlH8mNr292vakgJFQ",
+      authDomain: "figo-movies.firebaseapp.com",
+      databaseURL: "https://figo-movies-default-rtdb.firebaseio.com",
+      projectId: "figo-movies",
+      storageBucket: "figo-movies.firebasestorage.app",
+      messagingSenderId: "425238806262",
+      appId: "1:425238806262:web:7d23814e4b550695bb76d7"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let deviceId = localStorage.getItem('capitalx_device_id');
+    if (!deviceId) {
+      deviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('capitalx_device_id', deviceId);
+    }
+
+    // --- SECTION 1 LOGIC (RISK CALCULATOR) ---
+    function validateInputs() {
+      const capitalInput = document.getElementById('capital');
+      const leverageInput = document.getElementById('leverage');
+      
+      const capital = parseFloat(capitalInput.value);
+      let leverage = parseFloat(leverageInput.value);
+
+      if (leverage > 100) {
+        leverageInput.value = 100;
+        leverage = 100;
+      }
+
+      const calcBtn = document.getElementById('calc-btn');
+
+      if (capital > 0 && leverage >= 1 && leverage <= 100) {
+        calcBtn.disabled = false;
+      } else {
+        calcBtn.disabled = true;
+      }
+    }
+
+    function calculateRiskPlan() {
+      const capital = parseFloat(document.getElementById('capital').value);
+      let leverage = parseFloat(document.getElementById('leverage').value);
+
+      if (leverage > 100) leverage = 100;
+      if (leverage < 1) leverage = 1;
+
+      const marginPct = 15;
+      const marginAmt = (capital * marginPct) / 100;
+      const exposure = marginAmt * leverage;
+
+      const riskPct = 2;
+      const riskAmt = (capital * riskPct) / 100;
+
+      const dailyLoss = riskAmt;
+      const dailyTarget = riskAmt * 2;
+
+      document.getElementById('res-capital').textContent = '₹' + capital.toLocaleString('en-IN');
+      document.getElementById('res-margin').textContent = '₹' + marginAmt.toLocaleString('en-IN') + ' (' + marginPct + '%)';
+      document.getElementById('res-leverage').textContent = leverage + '×';
+      document.getElementById('res-exposure').textContent = '₹' + exposure.toLocaleString('en-IN');
+      document.getElementById('res-risk').textContent = '₹' + riskAmt.toLocaleString('en-IN') + ' (' + riskPct + '%)';
+      document.getElementById('res-daily-loss').textContent = '₹' + dailyLoss.toLocaleString('en-IN');
+      document.getElementById('res-daily-target').textContent = '₹' + dailyTarget.toLocaleString('en-IN');
+      document.getElementById('res-loss-limit').textContent = '1 Trade';
+
+      document.getElementById('rec-margin').textContent = '₹' + marginAmt.toLocaleString('en-IN');
+      document.getElementById('result-wrapper').style.display = 'block';
+
+      db.ref('users/' + deviceId + '/riskPlan').set({
+        capital: capital,
+        leverage: leverage,
+        lastUpdated: new Date().toISOString()
+      });
+    }
+
+    // --- SECTION 2 LOGIC (PROFIT CALCULATOR) ---
+    function validatePnlInputs() {
+      const capitalInput = document.getElementById('pnl-capital');
+      const leverageInput = document.getElementById('pnl-leverage');
+      const percentageInput = document.getElementById('pnl-percentage');
+
+      const capital = parseFloat(capitalInput.value);
+      let leverage = parseFloat(leverageInput.value);
+      const percentage = parseFloat(percentageInput.value);
+
+      if (leverage > 200) {
+        leverageInput.value = 200;
+        leverage = 200;
+      }
+
+      const pnlBtn = document.getElementById('pnl-calc-btn');
+
+      if (capital > 0 && leverage >= 1 && leverage <= 200 && !isNaN(percentage)) {
+        pnlBtn.disabled = false;
+      } else {
+        pnlBtn.disabled = true;
+      }
+    }
+
+    function calculatePnL() {
+      const capital = parseFloat(document.getElementById('pnl-capital').value) || 0;
+      let leverage = parseFloat(document.getElementById('pnl-leverage').value) || 1;
+      const percentage = parseFloat(document.getElementById('pnl-percentage').value) || 0;
+
+      if (leverage > 200) leverage = 200;
+      if (leverage < 1) leverage = 1;
+
+      const totalExposure = capital * leverage;
+      const totalPnL = (totalExposure * percentage) / 100;
+
+      document.getElementById('pnl-res-capital').textContent = '₹' + capital.toLocaleString('en-IN');
+      document.getElementById('pnl-res-leverage').textContent = leverage + '×';
+      document.getElementById('pnl-res-percentage').textContent = (percentage >= 0 ? '+' : '') + percentage + '%';
+      document.getElementById('pnl-res-exposure').textContent = '₹' + totalExposure.toLocaleString('en-IN');
+
+      const totalElem = document.getElementById('pnl-res-total');
+      const formattedPnL = (totalPnL >= 0 ? '+₹' : '-₹') + Math.abs(totalPnL).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      totalElem.textContent = formattedPnL;
+
+      if (totalPnL >= 0) {
+        totalElem.className = 'grid-value success';
+      } else {
+        totalElem.className = 'grid-value danger';
+      }
+
+      document.getElementById('pnl-result-wrapper').style.display = 'block';
+
+      db.ref('users/' + deviceId + '/pnlCalc').set({
+        capital: capital,
+        leverage: leverage,
+        percentage: percentage,
+        totalPnL: totalPnL,
+        lastUpdated: new Date().toISOString()
+      });
+    }
+
+    // --- CANVAS IMAGE DOWNLOAD GENERATOR WITH AAYAN INDUSTRIES & CAPITAL X WATERMARK ---
+    function shareAsImage(type) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 560;
+      const ctx = canvas.getContext('2d');
+
+      // Dark Canvas Background
+      ctx.fillStyle = '#131927';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(20, 20, 560, 520, 24);
+      ctx.stroke();
+
+      let items = [];
+      let titleText = "";
+      let filename = "";
+
+      if (type === 'risk') {
+        titleText = 'Risk Management Plan';
+        filename = 'CapitalX_Risk_Plan.png';
+        items = [
+          { label: 'Total Capital', val: document.getElementById('res-capital').textContent, color: '#f1f5f9' },
+          { label: 'Margin Allocated', val: document.getElementById('res-margin').textContent, color: '#f1f5f9' },
+          { label: 'Leverage', val: document.getElementById('res-leverage').textContent, color: '#f1f5f9' },
+          { label: 'Position Exposure', val: document.getElementById('res-exposure').textContent, color: '#f1f5f9' },
+          { label: 'Risk Per Trade', val: document.getElementById('res-risk').textContent, color: '#ef4444' },
+          { label: 'Daily Loss Limit', val: document.getElementById('res-daily-loss').textContent, color: '#ef4444' },
+          { label: 'Daily Target', val: document.getElementById('res-daily-target').textContent, color: '#10b981' },
+          { label: 'Planned Loss Limit', val: '1 Trade', color: '#f1f5f9' }
+        ];
+      } else {
+        titleText = 'PnL Calculation Report';
+        filename = 'CapitalX_PnL_Report.png';
+        const pnlVal = document.getElementById('pnl-res-total').textContent;
+        const pnlColor = pnlVal.startsWith('+') ? '#10b981' : (pnlVal.startsWith('-') ? '#ef4444' : '#f1f5f9');
+
+        items = [
+          { label: 'Capital Amount', val: document.getElementById('pnl-res-capital').textContent, color: '#f1f5f9' },
+          { label: 'Leverage Used', val: document.getElementById('pnl-res-leverage').textContent, color: '#f1f5f9' },
+          { label: 'Price Change (%)', val: document.getElementById('pnl-res-percentage').textContent, color: '#f1f5f9' },
+          { label: 'Total Exposure', val: document.getElementById('pnl-res-exposure').textContent, color: '#f1f5f9' },
+          { label: 'Net Profit / Loss', val: pnlVal, color: pnlColor, fullWidth: true }
+        ];
+      }
+
+      // APP TITLE IN IMAGE
+      ctx.fillStyle = '#6366f1';
+      ctx.font = '800 24px sans-serif';
+      ctx.fillText('Capital X', 40, 55);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '500 16px sans-serif';
+      ctx.fillText('•  ' + titleText, 160, 55);
+
+      // RENDER GRID DATA
+      items.forEach((item, index) => {
+        if (item.fullWidth) {
+          const x = 40;
+          const y = 85 + 2 * 90;
+          ctx.fillStyle = '#1c2436';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+          ctx.beginPath();
+          ctx.roundRect(x, y, 520, 80, 16);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '500 14px sans-serif';
+          ctx.fillText(item.label, x + 15, y + 30);
+
+          ctx.fillStyle = item.color;
+          ctx.font = '800 24px sans-serif';
+          ctx.fillText(item.val, x + 15, y + 62);
+        } else {
+          const col = index % 2;
+          const row = Math.floor(index / 2);
+          const x = 40 + col * 270;
+          const y = 85 + row * 90;
+
+          ctx.fillStyle = '#1c2436';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+          ctx.beginPath();
+          ctx.roundRect(x, y, 250, 75, 16);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '500 14px sans-serif';
+          ctx.fillText(item.label, x + 15, y + 30);
+
+          ctx.fillStyle = item.color;
+          ctx.font = '800 20px sans-serif';
+          ctx.fillText(item.val, x + 15, y + 58);
+        }
+      });
+
+      // AAYAN INDUSTRIES BRANDING WATERMARK IN DOWNLOADED IMAGE
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.2)';
+      ctx.fillRect(40, 480, 520, 1);
+
+      ctx.fillStyle = '#6366f1';
+      ctx.font = '700 14px sans-serif';
+      ctx.fillText('Capital X', 40, 510);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '500 13px sans-serif';
+      ctx.fillText('Powered by Aayan Industries', 115, 510);
+
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        document.getElementById('preview-img').src = dataUrl;
+        const dlLink = document.getElementById('download-link');
+        dlLink.href = dataUrl;
+        dlLink.download = filename;
+        document.getElementById('modal-card-title').textContent = titleText;
+        document.getElementById('image-modal').style.display = 'flex';
+      } catch (err) {
+        alert("Image generate karne me error aaya: " + err.message);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('image-modal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
