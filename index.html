@@ -34,15 +34,22 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow-x: hidden;
+    }
+
     body {
       background-color: var(--bg);
       color: var(--text-main);
       display: flex;
-      justify-content: center;
-      min-height: 100vh;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100dvh;
       padding: 12px;
-      padding-bottom: 70px;
-      overflow-x: hidden;
+      padding-bottom: 75px; /* Ad ke liye space preserve karne ke liye */
+      position: relative;
     }
 
     /* SPLASH SCREEN STYLES */
@@ -422,26 +429,21 @@
       border: 1px solid var(--border);
     }
 
-    /* FIXED BOTTOM AD CONTAINER WITH WHITE BLUR */
+    /* PERMANENT STRICT BOTTOM BANNER AD CONTAINER */
     #ad-container {
-      position: fixed;
+      position: absolute;
       bottom: 0;
       left: 0;
       width: 100%;
       height: 60px;
-      background: rgba(255, 255, 255, 0.85); /* White Backdrop Blur */
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border-top: 1px solid rgba(0, 0, 0, 0.08);
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 999;
-      box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
-    }
-
-    #ad-container.ad-hidden {
-      display: none !important;
+      z-index: 99;
     }
   </style>
 </head>
@@ -664,7 +666,7 @@
 
   </div>
 
-  <!-- FIXED BOTTOM AD CONTAINER -->
+  <!-- ALWAYS LOCKED AT PHYSICAL BOTTOM BANNER AD -->
   <div id="ad-container">
     <script type="text/javascript">
       atOptions = {
@@ -692,8 +694,6 @@
   </div>
 
   <script>
-    const adContainer = document.getElementById('ad-container');
-
     // --- SPLASH SCREEN TIMING ---
     window.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
@@ -705,43 +705,6 @@
         content.style.opacity = '1';
       }, 2000);
     });
-
-    // --- SMART AD HIDE/SHOW LOGIC ---
-    function hideAd() {
-      adContainer.classList.add('ad-hidden');
-    }
-
-    function showAd() {
-      // Strict check: Agar koi input focused hai ya keyboard khula hai toh ad SHOW nahi hoga
-      const isInputActive = document.activeElement && document.activeElement.tagName === 'INPUT';
-      const isKeyboardOpen = window.visualViewport && (window.visualViewport.height < window.innerHeight * 0.85);
-
-      if (!isInputActive && !isKeyboardOpen) {
-        adContainer.classList.remove('ad-hidden');
-      }
-    }
-
-    // Input Focus/Blur Handlers with delay to handle switching between input fields smoothly
-    document.querySelectorAll('input').forEach(input => {
-      input.addEventListener('focus', hideAd);
-      
-      input.addEventListener('blur', () => {
-        setTimeout(() => {
-          showAd();
-        }, 200);
-      });
-    });
-
-    // Viewport Resize Listener for Keyboard Detection
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', () => {
-        if (window.visualViewport.height < window.innerHeight * 0.85) {
-          hideAd();
-        } else {
-          setTimeout(showAd, 200);
-        }
-      });
-    }
 
     // --- RESET FORM DATA ON TAB SWITCH ---
     function resetAllForms() {
