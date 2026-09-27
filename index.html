@@ -41,7 +41,7 @@
       justify-content: center;
       min-height: 100vh;
       padding: 12px;
-      padding-bottom: 70px; /* Space reserved for bottom sticky ad */
+      padding-bottom: 70px;
       overflow-x: hidden;
     }
 
@@ -422,22 +422,27 @@
       border: 1px solid var(--border);
     }
 
-    /* STICKY BOTTOM AD CONTAINER - WHITE BLUR */
+    /* FIXED BOTTOM AD CONTAINER WITH WHITE BLUR */
     #ad-container {
       position: fixed;
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 55px;
-      background: rgba(255, 255, 255, 0.85); /* White background */
-      backdrop-filter: blur(10px); /* Frosted Glass Blur effect */
+      height: 60px;
+      background: rgba(255, 255, 255, 0.85); /* White Blur Background */
+      backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border-top: 1px solid rgba(0, 0, 0, 0.08);
-      display: none; /* Controlled via JS */
+      display: flex;
       justify-content: center;
       align-items: center;
       z-index: 999;
       box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    #ad-container.ad-hidden {
+      display: none !important;
     }
   </style>
 </head>
@@ -660,7 +665,7 @@
 
   </div>
 
-  <!-- FIXED BANNER AD CONTAINER -->
+  <!-- FIXED BOTTOM AD CONTAINER -->
   <div id="ad-container">
     <script type="text/javascript">
       atOptions = {
@@ -688,9 +693,9 @@
   </div>
 
   <script>
-    let isSplashDone = false;
+    const adContainer = document.getElementById('ad-container');
 
-    // --- SPLASH SCREEN TIMING & AD DISPLAY ---
+    // --- SPLASH SCREEN TIMING ---
     window.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         const splash = document.getElementById('splash-screen');
@@ -699,45 +704,39 @@
         splash.style.opacity = '0';
         splash.style.visibility = 'hidden';
         content.style.opacity = '1';
-        
-        isSplashDone = true;
-        checkAdVisibility();
       }, 2000);
     });
 
-    // --- HIDE BANNER AD WHEN KEYBOARD OPENS ---
-    function checkAdVisibility() {
-      if (!isSplashDone) return;
-
-      const adContainer = document.getElementById('ad-container');
-      
-      // Visual Viewport API for detecting keyboard overlay
-      if (window.visualViewport) {
-        const isKeyboardOpen = window.visualViewport.height < window.innerHeight * 0.85;
-        if (isKeyboardOpen) {
-          adContainer.style.display = 'none'; // Keyboard open -> Hide Ad
-        } else {
-          adContainer.style.display = 'flex'; // Keyboard closed -> Show Ad at Bottom
-        }
-      } else {
-        adContainer.style.display = 'flex';
-      }
+    // --- HIDE AD ON KEYBOARD OPEN (INPUT FOCUS & VIEWPORT RESIZE) ---
+    function hideAd() {
+      adContainer.classList.add('ad-hidden');
     }
 
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', checkAdVisibility);
-      window.visualViewport.addEventListener('scroll', checkAdVisibility);
+    function showAd() {
+      adContainer.classList.remove('ad-hidden');
     }
 
-    // Input focus/blur backup handlers
-    document.querySelectorAll('.input-field').forEach(input => {
-      input.addEventListener('focus', () => {
-        if (isSplashDone) document.getElementById('ad-container').style.display = 'none';
-      });
+    // Attach Focus & Blur handlers to all inputs
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('focus', hideAd);
       input.addEventListener('blur', () => {
-        setTimeout(checkAdVisibility, 300);
+        setTimeout(showAd, 200);
       });
     });
+
+    // Visual Viewport resize listener for mobile devices
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        if (window.visualViewport.height < window.innerHeight * 0.8) {
+          hideAd();
+        } else {
+          // Verify if no input is active before showing ad
+          if (document.activeElement.tagName !== 'INPUT') {
+            showAd();
+          }
+        }
+      });
+    }
 
     // --- RESET FORM DATA ON TAB SWITCH ---
     function resetAllForms() {
@@ -752,7 +751,7 @@
       document.getElementById('ps-calc-btn').disabled = true;
     }
 
-    // --- TAB SWITCHER LOGIC WITH AUTO-RESET ---
+    // --- TAB SWITCHER LOGIC ---
     function switchTab(tabId, btnElement) {
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -939,14 +938,13 @@
       });
     }
 
-    // --- CANVAS IMAGE DOWNLOAD GENERATOR ---
+    // --- IMAGE GENERATOR ---
     function shareAsImage(type) {
       const canvas = document.createElement('canvas');
       canvas.width = 600;
       canvas.height = 560;
       const ctx = canvas.getContext('2d');
 
-      // Light Canvas Background
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -996,7 +994,6 @@
         ];
       }
 
-      // APP TITLE IN IMAGE
       ctx.fillStyle = '#4f46e5';
       ctx.font = '800 24px sans-serif';
       ctx.fillText('Capital X', 40, 55);
@@ -1005,7 +1002,6 @@
       ctx.font = '500 16px sans-serif';
       ctx.fillText('•  ' + titleText, 160, 55);
 
-      // RENDER GRID DATA
       items.forEach((item, index) => {
         if (item.fullWidth) {
           const x = 40;
@@ -1047,7 +1043,6 @@
         }
       });
 
-      // AAYAN LIKHAR BRANDING WATERMARK IN DOWNLOADED IMAGE
       ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
       ctx.fillRect(40, 480, 520, 1);
 
