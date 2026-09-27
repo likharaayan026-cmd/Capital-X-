@@ -41,6 +41,7 @@
       justify-content: center;
       min-height: 100vh;
       padding: 12px;
+      padding-bottom: 70px; /* Space reserved for bottom sticky ad */
       overflow-x: hidden;
     }
 
@@ -420,6 +421,24 @@
       color: var(--text-main);
       border: 1px solid var(--border);
     }
+
+    /* STICKY BOTTOM AD CONTAINER - WHITE BLUR */
+    #ad-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 55px;
+      background: rgba(255, 255, 255, 0.85); /* White background */
+      backdrop-filter: blur(10px); /* Frosted Glass Blur effect */
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      display: none; /* Controlled via JS */
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
+    }
   </style>
 </head>
 <body>
@@ -641,6 +660,20 @@
 
   </div>
 
+  <!-- FIXED BANNER AD CONTAINER -->
+  <div id="ad-container">
+    <script type="text/javascript">
+      atOptions = {
+        'key' : 'c79121e703cde2d3db4c63bba85f094e',
+        'format' : 'iframe',
+        'height' : 50,
+        'width' : 320,
+        'params' : {}
+      };
+    </script>
+    <script type="text/javascript" src="https://www.highrevenueformat.com/c79121e703cde2d3db4c63bba85f094e/invoke.js"></script>
+  </div>
+
   <!-- IMAGE PREVIEW MODAL -->
   <div id="image-modal" class="modal-overlay">
     <div class="modal-content">
@@ -655,7 +688,9 @@
   </div>
 
   <script>
-    // --- SPLASH SCREEN TIMING ---
+    let isSplashDone = false;
+
+    // --- SPLASH SCREEN TIMING & AD DISPLAY ---
     window.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         const splash = document.getElementById('splash-screen');
@@ -664,20 +699,54 @@
         splash.style.opacity = '0';
         splash.style.visibility = 'hidden';
         content.style.opacity = '1';
+        
+        isSplashDone = true;
+        checkAdVisibility();
       }, 2000);
+    });
+
+    // --- HIDE BANNER AD WHEN KEYBOARD OPENS ---
+    function checkAdVisibility() {
+      if (!isSplashDone) return;
+
+      const adContainer = document.getElementById('ad-container');
+      
+      // Visual Viewport API for detecting keyboard overlay
+      if (window.visualViewport) {
+        const isKeyboardOpen = window.visualViewport.height < window.innerHeight * 0.85;
+        if (isKeyboardOpen) {
+          adContainer.style.display = 'none'; // Keyboard open -> Hide Ad
+        } else {
+          adContainer.style.display = 'flex'; // Keyboard closed -> Show Ad at Bottom
+        }
+      } else {
+        adContainer.style.display = 'flex';
+      }
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', checkAdVisibility);
+      window.visualViewport.addEventListener('scroll', checkAdVisibility);
+    }
+
+    // Input focus/blur backup handlers
+    document.querySelectorAll('.input-field').forEach(input => {
+      input.addEventListener('focus', () => {
+        if (isSplashDone) document.getElementById('ad-container').style.display = 'none';
+      });
+      input.addEventListener('blur', () => {
+        setTimeout(checkAdVisibility, 300);
+      });
     });
 
     // --- RESET FORM DATA ON TAB SWITCH ---
     function resetAllForms() {
-      // Clear inputs
       const inputs = document.querySelectorAll('.input-field');
       inputs.forEach(input => input.value = '');
 
-      // Hide results
       const results = document.querySelectorAll('.result-wrapper');
       results.forEach(res => res.style.display = 'none');
 
-      // Disable buttons
       document.getElementById('calc-btn').disabled = true;
       document.getElementById('pnl-calc-btn').disabled = true;
       document.getElementById('ps-calc-btn').disabled = true;
@@ -688,7 +757,7 @@
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       
-      resetAllForms(); // Tab badalne par sabhi data auto reset ho jayega
+      resetAllForms();
 
       document.getElementById(tabId).classList.add('active');
       btnElement.classList.add('active');
