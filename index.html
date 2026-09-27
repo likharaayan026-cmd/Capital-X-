@@ -429,7 +429,7 @@
       left: 0;
       width: 100%;
       height: 60px;
-      background: rgba(255, 255, 255, 0.85); /* White Blur Background */
+      background: rgba(255, 255, 255, 0.85); /* White Backdrop Blur */
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border-top: 1px solid rgba(0, 0, 0, 0.08);
@@ -438,7 +438,6 @@
       align-items: center;
       z-index: 999;
       box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
-      transition: opacity 0.2s ease, visibility 0.2s ease;
     }
 
     #ad-container.ad-hidden {
@@ -707,33 +706,39 @@
       }, 2000);
     });
 
-    // --- HIDE AD ON KEYBOARD OPEN (INPUT FOCUS & VIEWPORT RESIZE) ---
+    // --- SMART AD HIDE/SHOW LOGIC ---
     function hideAd() {
       adContainer.classList.add('ad-hidden');
     }
 
     function showAd() {
-      adContainer.classList.remove('ad-hidden');
+      // Strict check: Agar koi input focused hai ya keyboard khula hai toh ad SHOW nahi hoga
+      const isInputActive = document.activeElement && document.activeElement.tagName === 'INPUT';
+      const isKeyboardOpen = window.visualViewport && (window.visualViewport.height < window.innerHeight * 0.85);
+
+      if (!isInputActive && !isKeyboardOpen) {
+        adContainer.classList.remove('ad-hidden');
+      }
     }
 
-    // Attach Focus & Blur handlers to all inputs
+    // Input Focus/Blur Handlers with delay to handle switching between input fields smoothly
     document.querySelectorAll('input').forEach(input => {
       input.addEventListener('focus', hideAd);
+      
       input.addEventListener('blur', () => {
-        setTimeout(showAd, 200);
+        setTimeout(() => {
+          showAd();
+        }, 200);
       });
     });
 
-    // Visual Viewport resize listener for mobile devices
+    // Viewport Resize Listener for Keyboard Detection
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', () => {
-        if (window.visualViewport.height < window.innerHeight * 0.8) {
+        if (window.visualViewport.height < window.innerHeight * 0.85) {
           hideAd();
         } else {
-          // Verify if no input is active before showing ad
-          if (document.activeElement.tagName !== 'INPUT') {
-            showAd();
-          }
+          setTimeout(showAd, 200);
         }
       });
     }
